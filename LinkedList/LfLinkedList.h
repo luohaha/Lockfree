@@ -1,5 +1,6 @@
 #include<iostream>
 #include<string>
+#include "../RetireStation/RetireStation.h"
 
 namespace Lf {
 
@@ -52,6 +53,7 @@ class LinkedList {
   LinkedList() {}
   ~LinkedList() {}
   void Insert(Node& node) {
+    RetireGuard guard;
     LinkedNode* newnode = new LinkedNode();
     while (true) {
       FindPair pair;
@@ -65,6 +67,7 @@ class LinkedList {
   }
 
   bool Delete(Node& node) {
+    RetireGuard guard;
     while (true) {
       FindPair pair;
       while (!FindLarger(node, pair)) {}
@@ -78,6 +81,8 @@ class LinkedList {
 	continue;
       }
       if (ATOMIC_CAS(&pair.prev->next_, pair.curr, n_node)) {
+	// retire curr
+	RS.Retire(pair.curr);
 	return true;
       } else {
 	// release "lock"
@@ -88,6 +93,7 @@ class LinkedList {
   }
 
   bool Search(Node& node, Node& ret) {
+    RetireGuard guard;
     FindPair pair;
     while (!FindLarger(node, pair)) {}
     if (pair.curr == nullptr || pair.curr->data_ != node) {

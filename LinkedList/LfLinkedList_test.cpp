@@ -7,7 +7,7 @@ using namespace Lf;
 LinkedList list;
 
 void RandomSearchTest(int index) {
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 10000000; i++) {
     Node node;
     Node ret;
     uint32_t r = std::rand();
@@ -19,7 +19,7 @@ void RandomSearchTest(int index) {
     assert(node.value == ret.value);
     assert(list.Delete(node) == true);
     assert(list.Search(node, ret) == false);
-    std::cout<<std::to_string(r)<<std::endl;
+    //std::cout<<std::to_string(r)<<std::endl;
   }
 }
 

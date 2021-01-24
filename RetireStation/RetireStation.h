@@ -20,14 +20,6 @@ namespace Lf {
 #define ATOMIC_STORE(ptr, val) \
   __atomic_store_n(ptr, val, __ATOMIC_SEQ_CST)
 
-#define REF_MARK 0x7
-
-#define GET_REFCNT(ptr) \
-  ((uint64_t)ptr & (uint64_t)REF_MARK)
-
-#define SET_REFCNT(ptr, val) \
-  (((uint64_t)ptr & ~(uint64_t)REF_MARK) | val)
-
 uint64_t current_time() {
   timeval curTime;
   gettimeofday(&curTime, NULL);
@@ -35,7 +27,7 @@ uint64_t current_time() {
   return micro;
 }
 
-#define MAX_THREAD_CNT 2048
+#define MAX_THREAD_CNT 1048576
 static uint64_t global_clock;
 // TODO : be thread local
 static uint64_t thread_clock[MAX_THREAD_CNT];
@@ -78,7 +70,7 @@ class RetireStation {
     }
   }
   void Retire(void* ptr) {
-    int cur_index = ATOMIC_LOAD(&cur_index_) % 2;
+    uint8_t cur_index = ATOMIC_LOAD(&cur_index_);
     RetireNode* rn = new RetireNode();
     rn->ptr = ptr;
     do {
@@ -89,10 +81,10 @@ class RetireStation {
   void RetireWorker() {
     while (!stop_) {
       sleep(1);
-      int cur_index = ATOMIC_LOAD(&cur_index_);
-      int next_index = cur_index + 1;
-      ATOMIC_STORE(&cur_index_, next_index % 2);
-      uint64_t target = FETCH_AND_ADD(&global_clock, 1);
+      const uint8_t cur_index = ATOMIC_LOAD(&cur_index_);
+      const uint8_t next_index = cur_index ^ 1;
+      ATOMIC_STORE(&cur_index_, next_index);
+      const uint64_t target = FETCH_AND_ADD(&global_clock, 1);
       // wait all thread finish
       while (true) {
 	uint64_t min_clock = UINT64_MAX;
@@ -101,15 +93,14 @@ class RetireStation {
 	}
 	if (min_clock > target) {
 	  // safe to free
-	  RetireNode* rn = ptr_head_[cur_index % 2].next;
+	  RetireNode* rn = ptr_head_[cur_index].next;
 	  while (rn != nullptr) {
 	    RetireNode* to_free = rn;
 	    rn = rn->next;
 	    free(to_free->ptr);
 	    free(to_free);
-	    //printf("free %x next_index %d\n", 
-	    //to_free, next_index);
 	  }
+	  ptr_head_[cur_index].next = nullptr;
 	  break;
 	}
 	sleep(1);
@@ -123,7 +114,7 @@ class RetireStation {
   }
  private:
   bool stop_;
-  int cur_index_;
+  uint8_t cur_index_;
   RetireNode ptr_head_[2];
   std::vector<std::thread> thread_vec;
  };

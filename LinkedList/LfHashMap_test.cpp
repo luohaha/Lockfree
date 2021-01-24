@@ -1,14 +1,10 @@
-#include "LfLinkedList.h"
-#include<vector>
-#include<thread>
+#include "LfHashMap.h"
 #include <execinfo.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 using namespace Lf;
-
-LinkedList list;
 
 void handler(int sig) {
   void *array[10];
@@ -23,7 +19,7 @@ void handler(int sig) {
   exit(1);
 }
 
-void RandomSearchTest(int index) {
+void RandomSearchTest(int index, LfHashMap* map) {
   for (int i = 0; i < 10000000; i++) {
     Node node;
     Node ret;
@@ -31,20 +27,21 @@ void RandomSearchTest(int index) {
     node.key = std::to_string(index) + "_" + std::to_string(r);
     node.value = std::to_string(r);
     node.hash_code = std::hash<std::string>{}(node.key);
-    list.Insert(node);
-    assert(list.Search(node, ret) == true);
+    map->Insert(node);
+    assert(map->Search(node, ret) == true);
     assert(node.key == ret.key);
     assert(node.value == ret.value);
-    assert(list.Delete(node) == true);
-    assert(list.Search(node, ret) == false);
+    //assert(map->Delete(node) == true);
+    //assert(map->Search(node, ret) == false);
     //std::cout<<std::to_string(r)<<std::endl;
   }
 }
 
 void MultiThRandomSearchTest() {
+  LfHashMap map(16, 4);
   std::vector<std::thread> thread_vec;
   for (int i = 0; i < 10; i++) {
-    thread_vec.emplace_back(&RandomSearchTest, i);
+    thread_vec.emplace_back(&RandomSearchTest, i, &map);
   }
   for (auto& each : thread_vec) {
     each.join();

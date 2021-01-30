@@ -80,7 +80,7 @@ class RetireStation {
   }
   void RetireWorker() {
     while (!stop_) {
-      sleep(1);
+      usleep(100000);
       const uint8_t cur_index = ATOMIC_LOAD(&cur_index_);
       const uint8_t next_index = cur_index ^ 1;
       ATOMIC_STORE(&cur_index_, next_index);
@@ -103,7 +103,7 @@ class RetireStation {
 	  ptr_head_[cur_index].next = nullptr;
 	  break;
 	}
-	sleep(1);
+	//sleep(1);
       } // while (true)
     }
   }

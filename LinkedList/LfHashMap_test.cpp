@@ -20,7 +20,7 @@ void handler(int sig) {
 }
 
 void RandomSearchTest(int index, LfHashMap* map) {
-  for (int i = 0; i < 10000000; i++) {
+  for (int i = 0; i < 10000; i++) {
     Node node;
     Node ret;
     uint32_t r = std::rand();
@@ -31,8 +31,12 @@ void RandomSearchTest(int index, LfHashMap* map) {
     assert(map->Search(node, ret) == true);
     assert(node.key == ret.key);
     assert(node.value == ret.value);
-    //assert(map->Delete(node) == true);
-    //assert(map->Search(node, ret) == false);
+    if (i % 2 == 0) {
+      assert(map->Delete(node) == true);
+    }
+    node.key += "tmp";
+    node.hash_code = std::hash<std::string>{}(node.key);
+    assert(map->Search(node, ret) == false);
     //std::cout<<std::to_string(r)<<std::endl;
   }
 }
@@ -40,7 +44,7 @@ void RandomSearchTest(int index, LfHashMap* map) {
 void MultiThRandomSearchTest() {
   LfHashMap map(16, 4);
   std::vector<std::thread> thread_vec;
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 30; i++) {
     thread_vec.emplace_back(&RandomSearchTest, i, &map);
   }
   for (auto& each : thread_vec) {

@@ -28,7 +28,7 @@ void RandomSearchTest(int index) {
     Node node;
     Node ret;
     uint32_t r = std::rand();
-    node.key = std::to_string(index) + "_" + std::to_string(r);
+    node.key = std::to_string(r) + "_" + std::to_string(index);
     node.value = std::to_string(r);
     node.hash_code = std::hash<std::string>{}(node.key);
     list.Insert(node);
@@ -37,7 +37,7 @@ void RandomSearchTest(int index) {
     assert(node.value == ret.value);
     assert(list.Delete(node) == true);
     assert(list.Search(node, ret) == false);
-    //std::cout<<std::to_string(r)<<std::endl;
+    //   std::cout<<std::to_string(r)<<std::endl;
   }
 }
 

@@ -34,35 +34,38 @@ class LfHashMap {
   }
 
   void Insert(Node& node) {
+    const uint32_t mark = Mark();
     uint32_t hc = node.hash_code;
-    uint32_t bucket_id = reverse(hc) & Mark();
-    list_.InsertFrom(GetBucket(bucket_id), node);
+    uint32_t bucket_id = reverse(hc) & mark;
+    list_.InsertFrom(GetBucket(bucket_id, mark), node);
     ExpandMap();
   }
 
   bool Search(Node& node, Node& ret) {
+    const uint32_t mark = Mark();
     uint32_t hc = node.hash_code;
-    uint32_t bucket_id = reverse(hc) & Mark();
-    return list_.SearchFrom(GetBucket(bucket_id), node, ret);
+    uint32_t bucket_id = reverse(hc) & mark;
+    return list_.SearchFrom(GetBucket(bucket_id, mark), node, ret);
   }
 
   bool Delete(Node& node) {
+    const uint32_t mark = Mark();
     uint32_t hc = node.hash_code;
-    uint32_t bucket_id = reverse(hc) & Mark();
-    return list_.DeleteFrom(GetBucket(bucket_id), node);
+    uint32_t bucket_id = reverse(hc) & mark;
+    return list_.DeleteFrom(GetBucket(bucket_id, mark), node);
   }
   
  private:
   uint32_t Mark() {
-    return bucket_size_ - 1;
+    return ATOMIC_LOAD(&bucket_size_) - 1;
   }
-  LinkedNode* GetBucket(const uint32_t bucket_id) {
+  LinkedNode* GetBucket(const uint32_t bucket_id, const uint32_t mark) {
     LinkedNode* bn = ATOMIC_LOAD(&bucket_[bucket_id]);
     while (nullptr == bn) {
       LinkedNode* nn = new LinkedNode();
       nn->data_.hash_code = reverse(bucket_id);
       if (ATOMIC_CAS(&bucket_[bucket_id], nullptr, nn)) {
-	// succ
+	// if task hung here, it still be lock-free
 	list_.InsertLinkedNode(nn);
       } else {
 	delete nn;
@@ -70,7 +73,9 @@ class LfHashMap {
       bn = ATOMIC_LOAD(&bucket_[bucket_id]);
     }
     assert(bn != nullptr);
-    return bn;
+    const uint32_t next_mark = ((mark + 1) >> 1) - 1;
+    return (bn->next_ == nullptr && bucket_id > 1) 
+      ? GetBucket(bucket_id & next_mark, next_mark) : bn;
   }
   void ExpandMap() {
     uint64_t size = list_.Size();

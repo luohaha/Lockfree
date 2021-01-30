@@ -68,7 +68,7 @@ struct FindPair
 
 class LinkedList {
  public:
-  LinkedList() : size_(0) {}
+  LinkedList() : size_(0) { head_.next_ = nullptr; }
   ~LinkedList() {}
   void Insert(Node& node) {
     return InsertFrom(&head_, node);
@@ -135,17 +135,9 @@ class LinkedList {
 		      (LinkedNode*)MARK_NOT_DEL(n_node), 
 		      (LinkedNode*)MARK_DEL(n_node))) {
 	continue;
-      }
-      if (ATOMIC_CAS(&pair.prev->next_, pair.curr, n_node)) {
-	// retire curr
-	assert(pair.curr != &head_);
-	RS.Retire(pair.curr);
-	FETCH_AND_ADD(&size_, -1);
-	return true;
       } else {
-	// release "lock"
-	ATOMIC_STORE(&pair.curr->next_, 
-		     (LinkedNode*)MARK_NOT_DEL(n_node));
+	// lazy delete
+	return true;
       }
     }
   }
@@ -156,22 +148,37 @@ class LinkedList {
   bool FindLarger(LinkedNode* const begin_node, 
 		  Node& node, 
 		  FindPair& pair) {
-    if (begin_node == nullptr) {
-      return true;
-    }
-    LinkedNode *p = ATOMIC_LOAD(&begin_node->next_);
-    if (IS_DEL(p)) {
-      return false;
-    }
+    assert(begin_node != nullptr);
+    assert(!IS_DEL(begin_node->next_));
     pair.prev = begin_node;
-    pair.curr = p;
-    while (p != nullptr && p->data_ < node) {
-      pair.prev = p;
-      pair.curr = ATOMIC_LOAD(&p->next_);
-      p = pair.curr;
+    pair.curr = begin_node->next_;
+    while (pair.curr != nullptr
+	   && pair.curr->data_ < node) {
+      LinkedNode* p = pair.curr->next_;
       if (IS_DEL(p)) {
+	// pair.curr is del
+	if (ATOMIC_CAS(&pair.prev->next_, 
+		       pair.curr, 
+		       (LinkedNode*)MARK_NOT_DEL(p))) {
+	  RS.Retire(pair.curr);
+	  FETCH_AND_ADD(&size_, -1);
+	}
 	return false;
+      } else {
+	pair.prev = pair.curr;
+	pair.curr = p;
       }
+    }
+    if (pair.curr != nullptr  
+	&& IS_DEL(pair.curr->next_)) {
+      	// pair.curr is del
+       if (ATOMIC_CAS(&pair.prev->next_, 
+		      pair.curr, 
+		      (LinkedNode*)MARK_NOT_DEL(pair.curr->next_))) {
+	 RS.Retire(pair.curr);
+	 FETCH_AND_ADD(&size_, -1);
+       }
+       return false;
     }
     return true;
   }

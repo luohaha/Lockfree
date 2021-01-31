@@ -20,7 +20,7 @@ void handler(int sig) {
 }
 
 void RandomSearchTest(int index, LfHashMap* map) {
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 10000 * 3; i++) {
     Node node;
     Node ret;
     uint32_t r = std::rand();
@@ -42,14 +42,17 @@ void RandomSearchTest(int index, LfHashMap* map) {
 }
 
 void MultiThRandomSearchTest() {
-  LfHashMap map(16, 4);
+  LfHashMap map(2048, 10);
   std::vector<std::thread> thread_vec;
-  for (int i = 0; i < 30; i++) {
+  uint32_t start_ts = time(nullptr);
+  for (int i = 0; i < 10; i++) {
     thread_vec.emplace_back(&RandomSearchTest, i, &map);
   }
   for (auto& each : thread_vec) {
     each.join();
   }
+  printf("LfHashMapTest Cost : %u second\n", 
+	 time(nullptr) - start_ts);
 }
 
 int main() {

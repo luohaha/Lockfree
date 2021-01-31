@@ -24,7 +24,7 @@ void handler(int sig) {
 }
 
 void RandomSearchTest(int index) {
-  for (int i = 0; i < 10000000; i++) {
+  for (int i = 0; i < 1000; i++) {
     Node node;
     Node ret;
     uint32_t r = std::rand();

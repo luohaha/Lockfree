@@ -152,8 +152,7 @@ class LinkedList {
     assert(!IS_DEL(begin_node->next_));
     pair.prev = begin_node;
     pair.curr = begin_node->next_;
-    while (pair.curr != nullptr
-	   && pair.curr->data_ < node) {
+    while (pair.curr != nullptr) {
       LinkedNode* p = pair.curr->next_;
       if (IS_DEL(p)) {
 	// pair.curr is del
@@ -164,21 +163,13 @@ class LinkedList {
 	  FETCH_AND_ADD(&size_, -1);
 	}
 	return false;
-      } else {
+      }
+      if (pair.curr->data_ < node) {
 	pair.prev = pair.curr;
 	pair.curr = p;
+      } else {
+	break;
       }
-    }
-    if (pair.curr != nullptr  
-	&& IS_DEL(pair.curr->next_)) {
-      	// pair.curr is del
-       if (ATOMIC_CAS(&pair.prev->next_, 
-		      pair.curr, 
-		      (LinkedNode*)MARK_NOT_DEL(pair.curr->next_))) {
-	 RS.Retire(pair.curr);
-	 FETCH_AND_ADD(&size_, -1);
-       }
-       return false;
     }
     return true;
   }

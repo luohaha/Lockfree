@@ -3,7 +3,7 @@
 namespace Lf {
 
   // 2 ^ 20
-#define MAX_BUCKET_SIZE 1024
+#define MAX_BUCKET_SIZE 4096
 
 inline uint32_t reverse(uint32_t x)
 {
